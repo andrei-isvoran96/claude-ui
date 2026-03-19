@@ -178,8 +178,19 @@ export function watchHistory(onChange: () => void): () => void {
   const interval = setInterval(() => {
     try {
       if (!fs.existsSync(PROJECTS_DIR)) return
-      const stat = fs.statSync(PROJECTS_DIR)
-      if (stat.mtimeMs > lastCheck) {
+      // Check the top-level dir and all project subdirectories for changes
+      const dirsToCheck = [PROJECTS_DIR]
+      try {
+        for (const entry of fs.readdirSync(PROJECTS_DIR)) {
+          const sub = path.join(PROJECTS_DIR, entry)
+          if (fs.statSync(sub).isDirectory()) dirsToCheck.push(sub)
+        }
+      } catch { /* ignore */ }
+
+      const changed = dirsToCheck.some(dir => {
+        try { return fs.statSync(dir).mtimeMs > lastCheck } catch { return false }
+      })
+      if (changed) {
         lastCheck = Date.now()
         onChange()
       }
