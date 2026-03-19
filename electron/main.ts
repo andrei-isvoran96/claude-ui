@@ -6,10 +6,8 @@ import { loadHistory, watchHistory } from './history'
 const isDev = process.env.NODE_ENV !== 'production'
 
 let mainWindow: BrowserWindow | null = null
-let ptyProcess: import('node-pty').IPty | null = null
-// Monotonic counter — each pty:create increments this. Callbacks from old PTY
-// processes capture their own generation and discard events if it no longer matches.
-let ptyGeneration = 0
+const ptyMap = new Map<string, import('node-pty').IPty>()
+let ptyCounter = 0
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -35,10 +33,10 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null
-    if (ptyProcess) {
-      ptyProcess.kill()
-      ptyProcess = null
+    for (const p of ptyMap.values()) {
+      try { p.kill() } catch {}
     }
+    ptyMap.clear()
   })
 }
 
@@ -47,19 +45,11 @@ ipcMain.handle('pty:create', async (_event, { cols, rows, cwd }: { cols: number;
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const pty = require('node-pty')
 
-  // Increment generation BEFORE killing old PTY so its callbacks immediately
-  // see a stale generation and discard any final data/exit events.
-  const myGeneration = ++ptyGeneration
-
-  if (ptyProcess) {
-    ptyProcess.kill()
-    ptyProcess = null
-  }
-
+  const ptyId = `pty-${++ptyCounter}`
   const shell = process.env.SHELL || (process.platform === 'win32' ? 'cmd.exe' : '/bin/zsh')
   const workingDir = cwd && require('fs').existsSync(cwd) ? cwd : os.homedir()
 
-  ptyProcess = pty.spawn(shell, [], {
+  const ptyProcess = pty.spawn(shell, [], {
     name: 'xterm-256color',
     cols: cols || 80,
     rows: rows || 24,
@@ -71,33 +61,38 @@ ipcMain.handle('pty:create', async (_event, { cols, rows, cwd }: { cols: number;
     },
   })
 
-  ptyProcess!.onData((data: string) => {
-    if (ptyGeneration !== myGeneration) return  // stale PTY, discard
+  ptyMap.set(ptyId, ptyProcess)
+
+  ptyProcess.onData((data: string) => {
+    if (!ptyMap.has(ptyId)) return
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('pty:data', data)
+      mainWindow.webContents.send(`pty:data:${ptyId}`, data)
     }
   })
 
-  ptyProcess!.onExit(({ exitCode }: { exitCode: number }) => {
-    if (ptyGeneration !== myGeneration) return  // stale PTY, discard
+  ptyProcess.onExit(({ exitCode }: { exitCode: number }) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('pty:exit', { exitCode })
+      mainWindow.webContents.send(`pty:exit:${ptyId}`, { exitCode })
     }
-    ptyProcess = null
+    ptyMap.delete(ptyId)
   })
 
-  return { success: true, cwd: workingDir }
+  return { ptyId, cwd: workingDir }
 })
 
-ipcMain.on('pty:write', (_event, data: string) => {
-  if (ptyProcess) {
-    ptyProcess.write(data)
-  }
+ipcMain.on('pty:write', (_event, { ptyId, data }: { ptyId: string; data: string }) => {
+  ptyMap.get(ptyId)?.write(data)
 })
 
-ipcMain.on('pty:resize', (_event, { cols, rows }: { cols: number; rows: number }) => {
-  if (ptyProcess) {
-    ptyProcess.resize(cols, rows)
+ipcMain.on('pty:resize', (_event, { ptyId, cols, rows }: { ptyId: string; cols: number; rows: number }) => {
+  ptyMap.get(ptyId)?.resize(cols, rows)
+})
+
+ipcMain.on('pty:kill', (_event, ptyId: string) => {
+  const p = ptyMap.get(ptyId)
+  if (p) {
+    ptyMap.delete(ptyId)
+    try { p.kill() } catch {}
   }
 })
 

@@ -14,6 +14,7 @@ export default function TerminalPanel({ launchCwd, autoCommand, onReady }: Props
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
+  const ptyIdRef = useRef<string | null>(null)
   const initializedRef = useRef(false)
 
   const initPty = useCallback(async (
@@ -25,7 +26,8 @@ export default function TerminalPanel({ launchCwd, autoCommand, onReady }: Props
     fitAddon.fit()
     const { cols, rows } = term
 
-    await window.electronAPI.pty.create(cols, rows, cwd)
+    const { ptyId } = await window.electronAPI.pty.create(cols, rows, cwd)
+    ptyIdRef.current = ptyId
 
     if (command) {
       // Wait for the shell to settle (no PTY output for 200ms) before sending the command.
@@ -36,13 +38,13 @@ export default function TerminalPanel({ launchCwd, autoCommand, onReady }: Props
       const sendCommand = () => {
         if (sent) return
         sent = true
-        window.electronAPI.pty.write(`${command}\n`)
+        window.electronAPI.pty.write(ptyId, `${command}\n`)
       }
 
       // Fallback: send after 3s regardless
       const fallback = setTimeout(sendCommand, 3000)
 
-      window.electronAPI.pty.onData((data) => {
+      window.electronAPI.pty.onData(ptyId, (data) => {
         term.write(data)
         if (sent) return
         if (quietTimer) clearTimeout(quietTimer)
@@ -52,27 +54,27 @@ export default function TerminalPanel({ launchCwd, autoCommand, onReady }: Props
         }, 200)
       })
 
-      window.electronAPI.pty.onExit(({ exitCode }) => {
+      window.electronAPI.pty.onExit(ptyId, ({ exitCode }) => {
         clearTimeout(fallback)
         if (quietTimer) clearTimeout(quietTimer)
         term.writeln(`\r\n\x1b[90m[Process exited with code ${exitCode}]\x1b[0m`)
       })
     } else {
-      window.electronAPI.pty.onData((data) => {
+      window.electronAPI.pty.onData(ptyId, (data) => {
         term.write(data)
       })
 
-      window.electronAPI.pty.onExit(({ exitCode }) => {
+      window.electronAPI.pty.onExit(ptyId, ({ exitCode }) => {
         term.writeln(`\r\n\x1b[90m[Process exited with code ${exitCode}]\x1b[0m`)
       })
     }
 
     term.onData((data) => {
-      window.electronAPI.pty.write(data)
+      window.electronAPI.pty.write(ptyId, data)
     })
 
     term.onResize(({ cols, rows }) => {
-      window.electronAPI.pty.resize(cols, rows)
+      window.electronAPI.pty.resize(ptyId, cols, rows)
     })
   }, [])
 
@@ -133,7 +135,12 @@ export default function TerminalPanel({ launchCwd, autoCommand, onReady }: Props
 
     return () => {
       ro.disconnect()
-      window.electronAPI.pty.removeListeners()
+      const ptyId = ptyIdRef.current
+      if (ptyId) {
+        window.electronAPI.pty.removeListeners(ptyId)
+        window.electronAPI.pty.kill(ptyId)
+        ptyIdRef.current = null
+      }
       term.dispose()
       initializedRef.current = false
     }

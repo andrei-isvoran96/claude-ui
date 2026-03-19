@@ -1,10 +1,18 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { Project, Session } from '../types'
 
 interface Props {
   onOpenSession: (session: Session) => void
   onNewSession: (projectPath: string, projectName: string) => void
+  onOpenSessionInTab: (session: Session) => void
+  onOpenSessionInSplit: (session: Session) => void
   activeSessionId?: string
+}
+
+interface ContextMenuState {
+  x: number
+  y: number
+  session: Session
 }
 
 function formatTime(timestamp: string): string {
@@ -20,16 +28,76 @@ function formatTime(timestamp: string): string {
   return date.toLocaleDateString([], { month: 'short', day: 'numeric' })
 }
 
+function ContextMenu({
+  menu,
+  onClose,
+  onOpen,
+  onOpenInTab,
+  onOpenInSplit,
+}: {
+  menu: ContextMenuState
+  onClose: () => void
+  onOpen: (session: Session) => void
+  onOpenInTab: (session: Session) => void
+  onOpenInSplit: (session: Session) => void
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const onMouse = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('mousedown', onMouse)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onMouse)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [onClose])
+
+  const handle = (fn: () => void) => () => {
+    fn()
+    onClose()
+  }
+
+  return (
+    <div
+      ref={ref}
+      className="context-menu"
+      style={{ left: menu.x, top: menu.y }}
+    >
+      <button className="context-menu-item" onClick={handle(() => onOpen(menu.session))}>
+        Resume
+      </button>
+      <button className="context-menu-item" onClick={handle(() => onOpenInTab(menu.session))}>
+        Open in New Tab
+      </button>
+      <button className="context-menu-item" onClick={handle(() => onOpenInSplit(menu.session))}>
+        Open in Split Screen
+      </button>
+    </div>
+  )
+}
+
 function ProjectGroup({
   project,
   onOpenSession,
   onNewSession,
+  onOpenSessionInTab,
+  onOpenSessionInSplit,
   activeSessionId,
+  onContextMenu,
 }: {
   project: Project
   onOpenSession: (s: Session) => void
   onNewSession: (path: string, name: string) => void
+  onOpenSessionInTab: (s: Session) => void
+  onOpenSessionInSplit: (s: Session) => void
   activeSessionId?: string
+  onContextMenu: (e: React.MouseEvent, session: Session) => void
 }) {
   const [collapsed, setCollapsed] = useState(false)
 
@@ -57,6 +125,7 @@ function ProjectGroup({
               key={session.id}
               className={`session-item${session.id === activeSessionId ? ' session-item--active' : ''}`}
               onClick={() => onOpenSession(session)}
+              onContextMenu={(e) => onContextMenu(e, session)}
               title={`Resume: ${session.cwd}`}
             >
               <span className="session-title">{session.title}</span>
@@ -74,10 +143,17 @@ function ProjectGroup({
   )
 }
 
-export default function Sidebar({ onOpenSession, onNewSession, activeSessionId }: Props) {
+export default function Sidebar({
+  onOpenSession,
+  onNewSession,
+  onOpenSessionInTab,
+  onOpenSessionInSplit,
+  activeSessionId,
+}: Props) {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
 
   useEffect(() => {
     window.electronAPI.history.load().then((data) => {
@@ -89,6 +165,11 @@ export default function Sidebar({ onOpenSession, onNewSession, activeSessionId }
       setProjects(data)
     })
   }, [])
+
+  const handleContextMenu = (e: React.MouseEvent, session: Session) => {
+    e.preventDefault()
+    setContextMenu({ x: e.clientX, y: e.clientY, session })
+  }
 
   const filtered = search.trim()
     ? projects.map(p => ({
@@ -130,11 +211,24 @@ export default function Sidebar({ onOpenSession, onNewSession, activeSessionId }
               project={project}
               onOpenSession={onOpenSession}
               onNewSession={onNewSession}
+              onOpenSessionInTab={onOpenSessionInTab}
+              onOpenSessionInSplit={onOpenSessionInSplit}
               activeSessionId={activeSessionId}
+              onContextMenu={handleContextMenu}
             />
           ))
         )}
       </div>
+
+      {contextMenu && (
+        <ContextMenu
+          menu={contextMenu}
+          onClose={() => setContextMenu(null)}
+          onOpen={onOpenSession}
+          onOpenInTab={onOpenSessionInTab}
+          onOpenInSplit={onOpenSessionInSplit}
+        />
+      )}
     </div>
   )
 }

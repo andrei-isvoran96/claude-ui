@@ -21,16 +21,16 @@ export interface Project {
 
 export interface ElectronAPI {
   pty: {
-    create: (cols: number, rows: number, cwd?: string) => Promise<{ success: boolean; cwd: string }>
-    write: (data: string) => void
-    resize: (cols: number, rows: number) => void
-    onData: (cb: (data: string) => void) => void
-    onExit: (cb: (info: { exitCode: number }) => void) => void
-    removeListeners: () => void
+    create: (cols: number, rows: number, cwd?: string) => Promise<{ ptyId: string; cwd: string }>
+    write: (ptyId: string, data: string) => void
+    resize: (ptyId: string, cols: number, rows: number) => void
+    onData: (ptyId: string, cb: (data: string) => void) => void
+    onExit: (ptyId: string, cb: (info: { exitCode: number }) => void) => void
+    removeListeners: (ptyId: string) => void
+    kill: (ptyId: string) => void
   }
   history: {
     load: () => Promise<Project[]>
     onUpdate: (cb: (projects: Project[]) => void) => void
   }
 }
-

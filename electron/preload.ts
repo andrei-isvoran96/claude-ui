@@ -2,21 +2,22 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 contextBridge.exposeInMainWorld('electronAPI', {
   pty: {
-    create: (cols: number, rows: number, cwd?: string) =>
+    create: (cols: number, rows: number, cwd?: string): Promise<{ ptyId: string; cwd: string }> =>
       ipcRenderer.invoke('pty:create', { cols, rows, cwd }),
-    write: (data: string) => ipcRenderer.send('pty:write', data),
-    resize: (cols: number, rows: number) =>
-      ipcRenderer.send('pty:resize', { cols, rows }),
-    onData: (cb: (data: string) => void) => {
-      ipcRenderer.on('pty:data', (_event, data) => cb(data))
+    write: (ptyId: string, data: string) => ipcRenderer.send('pty:write', { ptyId, data }),
+    resize: (ptyId: string, cols: number, rows: number) =>
+      ipcRenderer.send('pty:resize', { ptyId, cols, rows }),
+    onData: (ptyId: string, cb: (data: string) => void) => {
+      ipcRenderer.on(`pty:data:${ptyId}`, (_event, data) => cb(data))
     },
-    onExit: (cb: (info: { exitCode: number }) => void) => {
-      ipcRenderer.on('pty:exit', (_event, info) => cb(info))
+    onExit: (ptyId: string, cb: (info: { exitCode: number }) => void) => {
+      ipcRenderer.on(`pty:exit:${ptyId}`, (_event, info) => cb(info))
     },
-    removeListeners: () => {
-      ipcRenderer.removeAllListeners('pty:data')
-      ipcRenderer.removeAllListeners('pty:exit')
+    removeListeners: (ptyId: string) => {
+      ipcRenderer.removeAllListeners(`pty:data:${ptyId}`)
+      ipcRenderer.removeAllListeners(`pty:exit:${ptyId}`)
     },
+    kill: (ptyId: string) => ipcRenderer.send('pty:kill', ptyId),
   },
   history: {
     load: (): Promise<import('./types').Project[]> =>
