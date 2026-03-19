@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "main": "dist-electron/main.js",
+  "bin": {
+    "claude-ui": "./bin/claude-ui.sh"
+  },
   "scripts": {
     "dev": "concurrently -k \"npm run dev:renderer\" \"npm run dev:electron\"",
     "dev:renderer": "vite",
