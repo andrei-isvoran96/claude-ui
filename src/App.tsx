@@ -4,21 +4,45 @@ import TerminalPanel from './components/TerminalPanel'
 import type { Session } from './types'
 import './App.css'
 
+interface TerminalState {
+  key: string
+  cwd?: string
+  autoCommand?: string
+  label?: string        // shown in the session bar
+  labelSub?: string     // secondary info (cwd or branch)
+}
+
 export default function App() {
-  const [activeSession, setActiveSession] = useState<Session | null>(null)
-  // terminalKey changes to force TerminalPanel remount on session resume
-  const [terminalKey, setTerminalKey] = useState('default')
+  const [terminal, setTerminal] = useState<TerminalState>({ key: 'default' })
   const [sidebarWidth, setSidebarWidth] = useState(280)
   const [isResizing, setIsResizing] = useState(false)
+  const [activeSessionId, setActiveSessionId] = useState<string | undefined>()
 
   const handleResumeSession = (session: Session) => {
-    setActiveSession(session)
-    setTerminalKey(`session-${session.id}`)
+    setActiveSessionId(session.id)
+    setTerminal({
+      key: `resume-${session.id}`,
+      cwd: session.cwd,
+      autoCommand: `claude --resume ${session.id}`,
+      label: session.title,
+      labelSub: session.gitBranch ?? session.cwd,
+    })
+  }
+
+  const handleNewSession = (projectPath: string, projectName: string) => {
+    setActiveSessionId(undefined)
+    setTerminal({
+      key: `new-${projectPath}-${Date.now()}`,
+      cwd: projectPath,
+      autoCommand: 'claude',
+      label: `New session — ${projectName}`,
+      labelSub: projectPath,
+    })
   }
 
   const handleClearSession = () => {
-    setActiveSession(null)
-    setTerminalKey('default')
+    setActiveSessionId(undefined)
+    setTerminal({ key: `clear-${Date.now()}` })
   }
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -43,35 +67,38 @@ export default function App() {
     document.addEventListener('mouseup', onUp)
   }
 
+  const hasBar = !!terminal.label
+
   return (
     <div className={`app ${isResizing ? 'resizing' : ''}`}>
       <div className="titlebar" />
 
       <div className="layout">
         <div className="sidebar-wrapper" style={{ width: sidebarWidth }}>
-          <Sidebar onOpenSession={handleResumeSession} activeSessionId={activeSession?.id} />
+          <Sidebar
+            onOpenSession={handleResumeSession}
+            onNewSession={handleNewSession}
+            activeSessionId={activeSessionId}
+          />
         </div>
 
         <div className="resize-handle" onMouseDown={handleMouseDown} />
 
         <div className="main-area">
-          {activeSession && (
+          {hasBar && (
             <div className="session-bar">
-              <span className="session-bar-title">{activeSession.title}</span>
-              {activeSession.gitBranch && (
-                <span className="branch-badge">{activeSession.gitBranch}</span>
-              )}
-              <span className="session-bar-cwd">{activeSession.cwd}</span>
-              <button className="session-bar-clear" onClick={handleClearSession} title="New terminal">
+              <span className="session-bar-title">{terminal.label}</span>
+              <span className="session-bar-cwd">{terminal.labelSub}</span>
+              <button className="session-bar-clear" onClick={handleClearSession} title="Close">
                 ✕
               </button>
             </div>
           )}
           <div className="terminal-wrapper">
             <TerminalPanel
-              key={terminalKey}
-              launchCwd={activeSession?.cwd}
-              resumeSessionId={activeSession?.id}
+              key={terminal.key}
+              launchCwd={terminal.cwd}
+              autoCommand={terminal.autoCommand}
             />
           </div>
         </div>

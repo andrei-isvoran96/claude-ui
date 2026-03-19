@@ -117,12 +117,18 @@
   margin-bottom: 2px;
 }
 
+.project-header-row {
+  display: flex;
+  align-items: center;
+  padding-right: 6px;
+}
+
 .project-header {
-  width: 100%;
+  flex: 1;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 6px 8px 6px 14px;
   background: none;
   border: none;
   cursor: pointer;
@@ -133,10 +139,33 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   transition: color 0.15s;
+  min-width: 0;
 }
 
 .project-header:hover {
   color: #bbb;
+}
+
+.new-session-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: #444;
+  font-size: 16px;
+  line-height: 1;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.new-session-btn:hover {
+  color: #cc785c;
+  background: #2a2a2a;
 }
 
 .project-chevron {

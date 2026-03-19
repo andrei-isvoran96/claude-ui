@@ -5,9 +5,11 @@ import { Project, Session, ChatMessage } from './types'
 
 const PROJECTS_DIR = path.join(os.homedir(), '.claude', 'projects')
 
-function dirNameToPath(dirName: string): string {
-  // e.g. "-Users-aisvoran-dev-armatune-ArmaTune" → "/Users/aisvoran/dev/armatune/ArmaTune"
-  return dirName.replace(/-/g, '/').replace(/^\//, '')
+function dirNameToFallbackPath(dirName: string): string {
+  // Naive decode — only used when no session has a cwd field.
+  // Replaces leading '-' with '/' and subsequent '-' with '/'.
+  // NOTE: this is lossy for paths containing dashes in directory names.
+  return '/' + dirName.replace(/^-/, '').replace(/-/g, '/')
 }
 
 // Tags injected by the Claude Code harness that are not real user messages
@@ -140,8 +142,6 @@ export function loadHistory(): Project[] {
 
   for (const dirName of projectDirs) {
     const dirPath = path.join(PROJECTS_DIR, dirName)
-    const projectPath = dirNameToPath(dirName)
-    const projectName = projectPath.split('/').filter(Boolean).pop() || dirName
 
     const jsonlFiles = fs
       .readdirSync(dirPath)
@@ -154,6 +154,10 @@ export function loadHistory(): Project[] {
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 
     if (sessions.length > 0) {
+      // Prefer the actual cwd recorded in sessions — it's exact and handles
+      // directory names that contain dashes (which dirNameToFallbackPath mangles).
+      const projectPath = sessions.find(s => s.cwd)?.cwd || dirNameToFallbackPath(dirName)
+      const projectName = projectPath.split('/').filter(Boolean).pop() || dirName
       projects.push({ path: projectPath, name: projectName, sessions })
     }
   }

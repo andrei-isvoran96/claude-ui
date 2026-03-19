@@ -3,6 +3,7 @@ import type { Project, Session } from '../types'
 
 interface Props {
   onOpenSession: (session: Session) => void
+  onNewSession: (projectPath: string, projectName: string) => void
   activeSessionId?: string
 }
 
@@ -22,21 +23,32 @@ function formatTime(timestamp: string): string {
 function ProjectGroup({
   project,
   onOpenSession,
+  onNewSession,
   activeSessionId,
 }: {
   project: Project
   onOpenSession: (s: Session) => void
+  onNewSession: (path: string, name: string) => void
   activeSessionId?: string
 }) {
   const [collapsed, setCollapsed] = useState(false)
 
   return (
     <div className="project-group">
-      <button className="project-header" onClick={() => setCollapsed(!collapsed)}>
-        <span className="project-chevron">{collapsed ? '›' : '⌄'}</span>
-        <span className="project-name" title={project.path}>{project.name}</span>
-        <span className="session-count">{project.sessions.length}</span>
-      </button>
+      <div className="project-header-row">
+        <button className="project-header" onClick={() => setCollapsed(!collapsed)}>
+          <span className="project-chevron">{collapsed ? '›' : '⌄'}</span>
+          <span className="project-name" title={project.path}>{project.name}</span>
+          <span className="session-count">{project.sessions.length}</span>
+        </button>
+        <button
+          className="new-session-btn"
+          onClick={() => onNewSession(project.path, project.name)}
+          title={`New claude session in ${project.name}`}
+        >
+          +
+        </button>
+      </div>
 
       {!collapsed && (
         <div className="session-list">
@@ -62,7 +74,7 @@ function ProjectGroup({
   )
 }
 
-export default function Sidebar({ onOpenSession, activeSessionId }: Props) {
+export default function Sidebar({ onOpenSession, onNewSession, activeSessionId }: Props) {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -117,6 +129,7 @@ export default function Sidebar({ onOpenSession, activeSessionId }: Props) {
               key={project.path}
               project={project}
               onOpenSession={onOpenSession}
+              onNewSession={onNewSession}
               activeSessionId={activeSessionId}
             />
           ))

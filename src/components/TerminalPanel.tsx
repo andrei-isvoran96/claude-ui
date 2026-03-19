@@ -6,11 +6,11 @@ import '@xterm/xterm/css/xterm.css'
 
 interface Props {
   launchCwd?: string
-  resumeSessionId?: string
+  autoCommand?: string
   onReady?: () => void
 }
 
-export default function TerminalPanel({ launchCwd, resumeSessionId, onReady }: Props) {
+export default function TerminalPanel({ launchCwd, autoCommand, onReady }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -20,36 +20,35 @@ export default function TerminalPanel({ launchCwd, resumeSessionId, onReady }: P
     term: Terminal,
     fitAddon: FitAddon,
     cwd?: string,
-    resumeId?: string,
+    command?: string,
   ) => {
     fitAddon.fit()
     const { cols, rows } = term
 
     await window.electronAPI.pty.create(cols, rows, cwd)
 
-    if (resumeId) {
-      // Wait for the shell to settle (no PTY output for 200ms) before sending the resume command.
+    if (command) {
+      // Wait for the shell to settle (no PTY output for 200ms) before sending the command.
       // This avoids the race condition where the command is sent before zsh finishes sourcing .zshrc.
       let quietTimer: ReturnType<typeof setTimeout> | null = null
       let sent = false
 
-      const sendResume = () => {
+      const sendCommand = () => {
         if (sent) return
         sent = true
-        window.electronAPI.pty.write(`claude --resume ${resumeId}\n`)
+        window.electronAPI.pty.write(`${command}\n`)
       }
 
       // Fallback: send after 3s regardless
-      const fallback = setTimeout(sendResume, 3000)
+      const fallback = setTimeout(sendCommand, 3000)
 
       window.electronAPI.pty.onData((data) => {
         term.write(data)
         if (sent) return
-        // Reset quiet timer on every chunk of output
         if (quietTimer) clearTimeout(quietTimer)
         quietTimer = setTimeout(() => {
           clearTimeout(fallback)
-          sendResume()
+          sendCommand()
         }, 200)
       })
 
@@ -123,7 +122,7 @@ export default function TerminalPanel({ launchCwd, resumeSessionId, onReady }: P
     termRef.current = term
     fitAddonRef.current = fitAddon
 
-    initPty(term, fitAddon, launchCwd, resumeSessionId).then(() => {
+    initPty(term, fitAddon, launchCwd, autoCommand).then(() => {
       onReady?.()
     })
 
