@@ -24,3 +24,5 @@ dist-renderer
 *.njsproj
 *.sln
 *.sw?
+
+release

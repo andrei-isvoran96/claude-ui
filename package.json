@@ -13,7 +13,7 @@
     "build": "tsc -p tsconfig.electron.json && vite build",
     "start": "npm run build && NODE_ENV=production electron .",
     "rebuild-pty": "electron-rebuild -f -w node-pty",
-    "dist": "npm run build && electron-builder --mac"
+    "dist": "npm run build && electron-builder --mac && npm run rebuild-pty"
   },
   "build": {
     "appId": "com.claudeui.app",
