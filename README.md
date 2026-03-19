@@ -7,6 +7,7 @@ A desktop interface for [Claude Code](https://claude.ai/code) with a built-in te
 ## Features
 
 - **Full terminal** — runs your shell so you can use `claude` exactly as you would in any terminal
+- **Multi-tab**/**Split Screen** — can run multiple tabs for multi-agent workflows
 - **Conversation history** — sidebar reads `~/.claude/projects/` and shows all past sessions grouped by project
 - **One-click resume** — click any session to run `claude --resume <id>` automatically in the correct project directory
 - **Search** — filter sessions across all projects instantly
