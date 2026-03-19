@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
 import TerminalPanel from './components/TerminalPanel'
 import type { Session } from './types'
@@ -14,18 +14,77 @@ interface PanelState {
   sessionId?: string
 }
 
+// Only the fields worth persisting across restarts
+interface PersistedTab {
+  id: string
+  cwd?: string
+  sessionId?: string
+  label?: string
+  labelSub?: string
+}
+
+interface PersistedState {
+  tabs: PersistedTab[]
+  activeTabId: string
+  splitPanel: PersistedTab | null
+}
+
+const STORAGE_KEY = 'claude-ui-tabs'
+
 function makeId() {
   return `panel-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 }
 
-const DEFAULT_PANEL: PanelState = { id: 'main', termKey: 'default' }
+function panelFromPersisted(p: PersistedTab): PanelState {
+  const autoCommand = p.sessionId
+    ? `claude --resume ${p.sessionId}`
+    : p.cwd ? 'claude' : undefined
+  return {
+    id: p.id,
+    termKey: `restore-${p.id}-${Date.now()}`,
+    cwd: p.cwd,
+    autoCommand,
+    label: p.label,
+    labelSub: p.labelSub,
+    sessionId: p.sessionId,
+  }
+}
+
+function loadInitialState(): { tabs: PanelState[]; activeTabId: string; splitPanel: PanelState | null; mountedIds: Set<string> } {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) {
+      const saved: PersistedState = JSON.parse(raw)
+      if (saved.tabs?.length) {
+        const tabs = saved.tabs.map(panelFromPersisted)
+        const activeTabId = tabs.find(t => t.id === saved.activeTabId) ? saved.activeTabId : tabs[0].id
+        const splitPanel = saved.splitPanel ? panelFromPersisted(saved.splitPanel) : null
+        return { tabs, activeTabId, splitPanel, mountedIds: new Set([activeTabId]) }
+      }
+    }
+  } catch {}
+  const id = 'main'
+  return { tabs: [{ id, termKey: 'default' }], activeTabId: id, splitPanel: null, mountedIds: new Set([id]) }
+}
+
+const initial = loadInitialState()
 
 export default function App() {
-  const [tabs, setTabs] = useState<PanelState[]>([DEFAULT_PANEL])
-  const [activeTabId, setActiveTabId] = useState('main')
-  const [splitPanel, setSplitPanel] = useState<PanelState | null>(null)
+  const [tabs, setTabs] = useState<PanelState[]>(initial.tabs)
+  const [activeTabId, setActiveTabId] = useState(initial.activeTabId)
+  const [splitPanel, setSplitPanel] = useState<PanelState | null>(initial.splitPanel)
   // Track which tabs have been mounted at least once (to avoid mounting hidden tabs)
-  const [mountedTabIds, setMountedTabIds] = useState<Set<string>>(new Set(['main']))
+  const [mountedTabIds, setMountedTabIds] = useState<Set<string>>(initial.mountedIds)
+
+  // Persist tabs state whenever it changes
+  useEffect(() => {
+    const state: PersistedState = {
+      tabs: tabs.map(t => ({ id: t.id, cwd: t.cwd, sessionId: t.sessionId, label: t.label, labelSub: t.labelSub })),
+      activeTabId,
+      splitPanel: splitPanel ? { id: splitPanel.id, cwd: splitPanel.cwd, sessionId: splitPanel.sessionId, label: splitPanel.label, labelSub: splitPanel.labelSub } : null,
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  }, [tabs, activeTabId, splitPanel])
   const [sidebarWidth, setSidebarWidth] = useState(280)
   const [isResizing, setIsResizing] = useState(false)
 
