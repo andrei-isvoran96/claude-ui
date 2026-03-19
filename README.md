@@ -2,7 +2,7 @@
 
 A desktop interface for [Claude Code](https://claude.ai/code) with a built-in terminal and conversation history sidebar.
 
-![img.png](img.png)
+![Demo.png](Demo.png)
 
 ## Features
 
