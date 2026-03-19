@@ -91,10 +91,6 @@ claude-ui/
 - **History:** Claude Code stores sessions as JSONL files in `~/.claude/projects/`. Each file is a conversation — `history.ts` parses these, strips system-injected XML tags, and surfaces them in the sidebar.
 - **Resume:** Clicking a session restarts the PTY in that project's `cwd`, then waits for the shell prompt (detected via 200ms quiet period) before sending `claude --resume <session-id>`.
 
-## Contributing
-
-PRs welcome. The codebase is intentionally small — under 600 lines across all source files.
-
 ## License
 
 MIT
