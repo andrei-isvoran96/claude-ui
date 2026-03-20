@@ -69,14 +69,6 @@ export default function TerminalPanel({ launchCwd, autoCommand, onReady }: Props
       })
     }
 
-    term.attachCustomKeyEventHandler((e) => {
-      if (e.type === 'keydown' && e.key === 'Enter' && e.shiftKey) {
-        window.electronAPI.pty.write(ptyId, '\n')
-        return false
-      }
-      return true
-    })
-
     term.onData((data) => {
       window.electronAPI.pty.write(ptyId, data)
     })
@@ -132,6 +124,25 @@ export default function TerminalPanel({ launchCwd, autoCommand, onReady }: Props
     termRef.current = term
     fitAddonRef.current = fitAddon
 
+    // Handle Shift+Enter at the window capture phase so it works even after
+    // paste operations that may cause xterm's textarea to lose focus.
+    // Intercepting here also prevents xterm from processing the Enter as \r.
+    const handleShiftEnter = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' || !e.shiftKey) return
+      if (!ptyIdRef.current) return
+      if (!containerRef.current?.contains(document.activeElement)) return
+      window.electronAPI.pty.write(ptyIdRef.current, '\n')
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    window.addEventListener('keydown', handleShiftEnter, true)
+
+    // After a paste the textarea can lose focus; re-focus so subsequent
+    // keyboard events (including Shift+Enter) are routed back to xterm.
+    const textarea = containerRef.current.querySelector<HTMLTextAreaElement>('textarea')
+    const handlePaste = () => requestAnimationFrame(() => term.focus())
+    textarea?.addEventListener('paste', handlePaste)
+
     initPty(term, fitAddon, launchCwd, autoCommand).then(() => {
       onReady?.()
     })
@@ -142,6 +153,8 @@ export default function TerminalPanel({ launchCwd, autoCommand, onReady }: Props
     ro.observe(containerRef.current)
 
     return () => {
+      window.removeEventListener('keydown', handleShiftEnter, true)
+      textarea?.removeEventListener('paste', handlePaste)
       ro.disconnect()
       const ptyId = ptyIdRef.current
       if (ptyId) {
