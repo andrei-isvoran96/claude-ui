@@ -4,6 +4,8 @@ A desktop interface for [Claude Code](https://claude.ai/code) with a built-in te
 
 ![Demo.png](Demo.png)
 
+![Demo2.png](Demo2.png)
+
 ## Features
 
 - **Full terminal** — runs your shell so you can use `claude` exactly as you would in any terminal
