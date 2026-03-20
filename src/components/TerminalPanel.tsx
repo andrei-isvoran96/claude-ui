@@ -69,6 +69,14 @@ export default function TerminalPanel({ launchCwd, autoCommand, onReady }: Props
       })
     }
 
+    term.attachCustomKeyEventHandler((e) => {
+      if (e.type === 'keydown' && e.key === 'Enter' && e.shiftKey) {
+        window.electronAPI.pty.write(ptyId, '\n')
+        return false
+      }
+      return true
+    })
+
     term.onData((data) => {
       window.electronAPI.pty.write(ptyId, data)
     })
