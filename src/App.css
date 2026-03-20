@@ -168,6 +168,24 @@
   background: #2a2a2a;
 }
 
+.new-session-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.new-session-menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  right: 0;
+  z-index: 1000;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  padding: 4px;
+  min-width: 180px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
 .project-chevron {
   font-size: 13px;
   width: 12px;
@@ -416,7 +434,7 @@
   background: none;
   border: none;
   color: #444;
-  font-size: 16px;
+  font-size: 20px;
   cursor: pointer;
   padding: 0 10px;
   height: 34px;
@@ -429,6 +447,24 @@
 
 .tab-add:hover {
   color: #cc785c;
+}
+
+.tab-new-menu-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.tab-new-menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  z-index: 1000;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  padding: 4px;
+  min-width: 180px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
 
 /* Terminal area — horizontal split support */

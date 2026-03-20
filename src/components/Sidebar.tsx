@@ -4,6 +4,8 @@ import type { Project, Session } from '../types'
 interface Props {
   onOpenSession: (session: Session) => void
   onNewSession: (projectPath: string, projectName: string) => void
+  onNewSessionInTab: (projectPath: string, projectName: string) => void
+  onNewSessionInSplit: (projectPath: string, projectName: string) => void
   onOpenSessionInTab: (session: Session) => void
   onOpenSessionInSplit: (session: Session) => void
   activeSessionId?: string
@@ -86,6 +88,8 @@ function ProjectGroup({
   project,
   onOpenSession,
   onNewSession,
+  onNewSessionInTab,
+  onNewSessionInSplit,
   onOpenSessionInTab,
   onOpenSessionInSplit,
   activeSessionId,
@@ -94,12 +98,29 @@ function ProjectGroup({
   project: Project
   onOpenSession: (s: Session) => void
   onNewSession: (path: string, name: string) => void
+  onNewSessionInTab: (path: string, name: string) => void
+  onNewSessionInSplit: (path: string, name: string) => void
   onOpenSessionInTab: (s: Session) => void
   onOpenSessionInSplit: (s: Session) => void
   activeSessionId?: string
   onContextMenu: (e: React.MouseEvent, session: Session) => void
 }) {
   const [collapsed, setCollapsed] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!showMenu) return
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showMenu])
+
+  const pick = (fn: () => void) => () => { fn(); setShowMenu(false) }
 
   return (
     <div className="project-group">
@@ -109,13 +130,22 @@ function ProjectGroup({
           <span className="project-name" title={project.path}>{project.name}</span>
           <span className="session-count">{project.sessions.length}</span>
         </button>
-        <button
-          className="new-session-btn"
-          onClick={() => onNewSession(project.path, project.name)}
-          title={`New claude session in ${project.name}`}
-        >
-          +
-        </button>
+        <div className="new-session-wrapper" ref={menuRef}>
+          <button
+            className="new-session-btn"
+            onClick={() => setShowMenu(v => !v)}
+            title={`New claude session in ${project.name}`}
+          >
+            +
+          </button>
+          {showMenu && (
+            <div className="new-session-menu">
+              <button className="context-menu-item" onClick={pick(() => onNewSession(project.path, project.name))}>Open</button>
+              <button className="context-menu-item" onClick={pick(() => onNewSessionInTab(project.path, project.name))}>Open in New Tab</button>
+              <button className="context-menu-item" onClick={pick(() => onNewSessionInSplit(project.path, project.name))}>Open in Split Window</button>
+            </div>
+          )}
+        </div>
       </div>
 
       {!collapsed && (
@@ -146,6 +176,8 @@ function ProjectGroup({
 export default function Sidebar({
   onOpenSession,
   onNewSession,
+  onNewSessionInTab,
+  onNewSessionInSplit,
   onOpenSessionInTab,
   onOpenSessionInSplit,
   activeSessionId,
@@ -211,6 +243,8 @@ export default function Sidebar({
               project={project}
               onOpenSession={onOpenSession}
               onNewSession={onNewSession}
+              onNewSessionInTab={onNewSessionInTab}
+              onNewSessionInSplit={onNewSessionInSplit}
               onOpenSessionInTab={onOpenSessionInTab}
               onOpenSessionInSplit={onOpenSessionInSplit}
               activeSessionId={activeSessionId}

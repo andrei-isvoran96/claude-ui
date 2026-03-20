@@ -122,6 +122,32 @@ export default function App() {
     })
   }
 
+  const handleNewSessionInTab = (projectPath: string, projectName: string) => {
+    const id = makeId()
+    const panel: PanelState = {
+      id,
+      termKey: `new-tab-${Date.now()}`,
+      cwd: projectPath,
+      autoCommand: 'claude',
+      label: `New session — ${projectName}`,
+      labelSub: projectPath,
+    }
+    setTabs(prev => [...prev, panel])
+    setMountedTabIds(prev => new Set([...prev, id]))
+    setActiveTabId(id)
+  }
+
+  const handleNewSessionInSplit = (projectPath: string, projectName: string) => {
+    setSplitPanel({
+      id: makeId(),
+      termKey: `split-new-${Date.now()}`,
+      cwd: projectPath,
+      autoCommand: 'claude',
+      label: `New session — ${projectName}`,
+      labelSub: projectPath,
+    })
+  }
+
   const handleOpenInTab = (session: Session) => {
     const id = makeId()
     const panel: PanelState = {
@@ -166,6 +192,10 @@ export default function App() {
     setTabs(prev => [...prev, { id, termKey: `new-tab-${Date.now()}` }])
     setMountedTabIds(prev => new Set([...prev, id]))
     setActiveTabId(id)
+  }
+
+  const handleOpenSplitBlank = () => {
+    setSplitPanel({ id: makeId(), termKey: `split-blank-${Date.now()}` })
   }
 
   const handleCloseTab = (id: string) => {
@@ -225,6 +255,8 @@ export default function App() {
           <Sidebar
             onOpenSession={handleResumeSession}
             onNewSession={handleNewSession}
+            onNewSessionInTab={handleNewSessionInTab}
+            onNewSessionInSplit={handleNewSessionInSplit}
             onOpenSessionInTab={handleOpenInTab}
             onOpenSessionInSplit={handleOpenInSplit}
             activeSessionId={activeSessionId}
