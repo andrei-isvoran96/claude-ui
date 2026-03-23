@@ -3,7 +3,7 @@ import * as path from 'path'
 import * as os from 'os'
 import { loadHistory, watchHistory } from './history'
 
-const isDev = process.env.NODE_ENV !== 'production'
+const isDev = !app.isPackaged && process.env.NODE_ENV !== 'production'
 
 let mainWindow: BrowserWindow | null = null
 const ptyMap = new Map<string, import('node-pty').IPty>()

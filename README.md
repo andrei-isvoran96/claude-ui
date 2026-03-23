@@ -28,11 +28,10 @@ A desktop interface for [Claude Code](https://claude.ai/code) with a built-in te
 git clone https://github.com/yourusername/claude-ui.git
 cd claude-ui
 npm install
-npm run rebuild-pty   # builds node-pty native module for Electron
 npm run start
 ```
 
-> **Note:** The `rebuild-pty` step is required once after install. It compiles the native terminal bindings for Electron's version of Node.
+> `npm install` now rebuilds `node-pty` automatically for Electron. If the native bindings ever get out of sync, run `npm run rebuild-pty` manually.
 
 ## Usage
 
@@ -54,7 +53,6 @@ The left sidebar lists all Claude Code sessions from `~/.claude/projects/`, grou
 
 ```bash
 npm install
-npm run rebuild-pty
 npm run dev          # starts Vite dev server + Electron with hot reload
 ```
 
@@ -68,6 +66,31 @@ To rebuild just the Electron main process after changes to `electron/`:
 npx tsc -p tsconfig.electron.json
 NODE_ENV=production npx electron .
 ```
+
+## Distribution
+
+To build a standalone Apple Silicon app bundle and installer:
+
+```bash
+npm run dist
+```
+
+That command will:
+
+- rebuild the macOS app icon from `public/favicon.svg`
+- build the Electron main process and React renderer
+- package an arm64 `.app`
+- create an arm64 `.dmg` and `.zip` in `release/`
+
+Artifacts land here:
+
+- `release/mac-arm64/Claude UI.app`
+- `release/Claude UI-0.1.0-arm64.dmg`
+- `release/Claude UI-0.1.0-arm64-mac.zip`
+
+The app bundle is standalone in the Electron sense, but it still expects the `claude` CLI to be installed on the target Mac and available on `PATH`.
+
+Because this project is not notarized yet, macOS may warn the first time you open it on another machine. For personal use on your own Mac, you can open the app via Finder's **Open** action once. For broader distribution, add a Developer ID certificate and notarize the build.
 
 ## Project Structure
 

@@ -2,32 +2,55 @@
   "name": "claude-ui",
   "private": true,
   "version": "0.1.0",
+  "description": "Electron desktop wrapper for Claude Code with a built-in terminal and session history.",
+  "author": "aisvoran",
   "main": "dist-electron/main.js",
   "bin": {
     "claude-ui": "./bin/claude-ui.sh"
   },
   "scripts": {
+    "postinstall": "npm run rebuild-pty",
     "dev": "concurrently -k \"npm run dev:renderer\" \"npm run dev:electron\"",
     "dev:renderer": "vite",
     "dev:electron": "wait-on http://localhost:5173 && tsc -p tsconfig.electron.json && electron .",
+    "build:mac-icon": "node ./scripts/build-mac-icon.cjs",
     "build": "tsc -p tsconfig.electron.json && vite build",
     "start": "npm run build && NODE_ENV=production electron .",
-    "rebuild-pty": "electron-rebuild -f -w node-pty",
-    "dist": "npm run build && electron-builder --mac && npm run rebuild-pty"
+    "rebuild-pty": "electron-builder install-app-deps",
+    "dist": "npm run dist:mac:arm64",
+    "dist:mac:arm64": "npm run build:mac-icon && npm run build && electron-builder --mac dmg zip --arm64"
   },
   "build": {
     "appId": "com.claudeui.app",
     "productName": "Claude UI",
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "build"
     },
     "files": [
       "dist-electron/**/*",
       "dist-renderer/**/*",
       "package.json"
     ],
+    "asarUnpack": [
+      "node_modules/node-pty/**/*"
+    ],
     "mac": {
-      "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }],
+      "icon": "build/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
       "category": "public.app-category.developer-tools"
     },
     "dmg": {
@@ -53,7 +76,6 @@
     "concurrently": "^9.2.1",
     "electron": "^41.0.3",
     "electron-builder": "^26.8.1",
-    "electron-rebuild": "^3.2.9",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",

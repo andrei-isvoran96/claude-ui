@@ -26,3 +26,5 @@ dist-renderer
 *.sw?
 
 release
+build/icon.icns
+build/icon.iconset
