@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import * as path from 'path'
 import * as os from 'os'
 import { loadHistory, watchHistory } from './history'
@@ -94,6 +94,16 @@ ipcMain.on('pty:kill', (_event, ptyId: string) => {
     ptyMap.delete(ptyId)
     try { p.kill() } catch {}
   }
+})
+
+// Dialog handler
+ipcMain.handle('dialog:openFolder', async () => {
+  const result = await dialog.showOpenDialog(mainWindow!, {
+    properties: ['openDirectory'],
+    title: 'Select Project Folder',
+  })
+  if (result.canceled || result.filePaths.length === 0) return null
+  return result.filePaths[0]
 })
 
 // History handlers

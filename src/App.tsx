@@ -260,6 +260,7 @@ export default function App() {
             onOpenSessionInTab={handleOpenInTab}
             onOpenSessionInSplit={handleOpenInSplit}
             activeSessionId={activeSessionId}
+            onAddProject={handleNewSessionInTab}
           />
         </div>
 

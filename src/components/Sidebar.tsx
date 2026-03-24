@@ -9,6 +9,7 @@ interface Props {
   onOpenSessionInTab: (session: Session) => void
   onOpenSessionInSplit: (session: Session) => void
   activeSessionId?: string
+  onAddProject: (projectPath: string, projectName: string) => void
 }
 
 interface ContextMenuState {
@@ -181,6 +182,7 @@ export default function Sidebar({
   onOpenSessionInTab,
   onOpenSessionInSplit,
   activeSessionId,
+  onAddProject,
 }: Props) {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
@@ -217,6 +219,18 @@ export default function Sidebar({
     <div className="sidebar">
       <div className="sidebar-header">
         <span className="sidebar-title">History</span>
+        <button
+          className="sidebar-add-project"
+          title="Open project folder"
+          onClick={async () => {
+            const folderPath = await window.electronAPI.dialog.openFolder()
+            if (!folderPath) return
+            const name = folderPath.split('/').filter(Boolean).pop() ?? folderPath
+            onAddProject(folderPath, name)
+          }}
+        >
+          +
+        </button>
       </div>
 
       <div className="search-wrapper">

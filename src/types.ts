@@ -33,4 +33,7 @@ export interface ElectronAPI {
     load: () => Promise<Project[]>
     onUpdate: (cb: (projects: Project[]) => void) => void
   }
+  dialog: {
+    openFolder: () => Promise<string | null>
+  }
 }

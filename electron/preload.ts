@@ -26,4 +26,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.on('history:update', (_event, projects) => cb(projects))
     },
   },
+  dialog: {
+    openFolder: (): Promise<string | null> => ipcRenderer.invoke('dialog:openFolder'),
+  },
 })
